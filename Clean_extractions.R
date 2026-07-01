@@ -13,40 +13,52 @@ library(readr)
 
 #1. Web of Science
 
-WOS <- read_excel("C:/Users/196408/Documents/Meta-analysis/Bdd/WoS.xls")
+WOS <- read_excel("Bdd/WoS.xls")
 
 #2. Scopus
 
-Scopus <- read.csv("C:/Users/196408/Documents/Meta-analysis/Bdd/Scopus.csv")
+Scopus <- read.csv("Bdd/Scopus.csv")
 
 #3.EconLit
 
 EconLit <- bind_rows(
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026.csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (1).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (2).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (3).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (4).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (5).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (6).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (7).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (8).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (9).csv", col_types = cols(.default = col_character())),
-  read_csv("C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit/EBSCO-Metadata-06_29_2026 (10).csv", col_types = cols(.default = col_character()))
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026.csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (1).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (2).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (3).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (4).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (5).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (6).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (7).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (8).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (9).csv", col_types = cols(.default = col_character())),
+  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (10).csv", col_types = cols(.default = col_character()))
 )
 
-write_csv(EconLit, "C:/Users/196408/Documents/Meta-analysis/Bdd/EconLit.csv")
+write_csv(EconLit, "Bdd/EconLit.csv")
 
 Total <- nrow(Scopus) + nrow(EconLit) + nrow(WOS)
 
 # II - Nettoyage des bases
 
-
 normalize_title <- function(x) {
   x |>
     str_to_lower() |>
+    str_replace_all("[^a-z0-9 ]", " ") |> #pour enlever les ponctuations
     str_squish()
 }
+
+normalize_doi <- function(x) {
+  x |> 
+    as.character() |> 
+    str_to_lower() |>
+    str_remove("^https?://(dx\\.)?doi\\.org/") |> 
+    str_trim()
+}
+
+#Est-ce que le DOI est exploitable ? 
+has_doi <- function(x) !is.na(x) & x != ""
+
 
 # Scopus
 Scopus_clean <- Scopus |>
@@ -102,24 +114,38 @@ WOS_clean <- WOS |>
     Document.Type = `Document Type`
   )
 
+
 # Fusion + suppression des doublons
-titres_scopus <- Scopus_clean$Title
 
-WOS_filtered <- WOS_clean |> 
-  filter(!(Title %in% titres_scopus))
+Scopus_clean  <- Scopus_clean  |> mutate(doi_n = normalize_doi(DOI))
+WOS_clean     <- WOS_clean     |> mutate(doi_n = normalize_doi(DOI))
+EconLit_clean <- EconLit_clean |> mutate(doi_n = normalize_doi(DOI))
 
-titres_WOS <- WOS_filtered$Title
+WOS_filtered <- WOS_clean |>
+  filter(!(has_doi(doi_n) & doi_n %in% Scopus_clean$doi_n)) |>
+  filter(!(Title %in% Scopus_clean$Title))
 
-EconLit_filtered <- EconLit_clean |> 
-  filter(!(Title %in% titres_scopus) & !(Title %in% titres_WOS))
+doi_deja   <- c(Scopus_clean$doi_n, WOS_filtered$doi_n)
+titre_deja <- c(Scopus_clean$Title, WOS_filtered$Title)
+
+EconLit_filtered <- EconLit_clean |>
+  filter(!(has_doi(doi_n) & doi_n %in% doi_deja)) |>
+  filter(!(Title %in% titre_deja))
 
 WOS_EconLit_filtered <- bind_rows(WOS_filtered, EconLit_filtered)
 
-write_csv(WOS_EconLit_filtered, "C:/Users/196408/Documents/Meta-analysis/Bdd/WOS_EconLit_filtered.csv")
+write_csv(WOS_EconLit_filtered, "Bdd/WOS_EconLit_filtered.csv")
 
-BDD <- bind_rows(Scopus_clean, EconLit_filtered, WOS_filtered)
+BDD <- bind_rows(Scopus_clean, WOS_filtered, EconLit_filtered)
+
+#Il faut aussi supprimer les doublons internes à chaque base, pas seulement d'une base à l'autre
+BDD <- BDD |>
+  filter(!(has_doi(doi_n) & duplicated(doi_n))) |>
+  distinct(Title, .keep_all = TRUE)
 
 Merge <- nrow(BDD)
+
+Total <- nrow(Scopus) + nrow(EconLit) + nrow(WOS)
 
 summary_dedup <- tibble(
   Indicateur = c(
@@ -133,4 +159,4 @@ summary_dedup <- tibble(
 
 kable(summary_dedup)
 
-write_csv(BDD, "C:/Users/196408/Documents/Meta-analysis/Bdd/BDD.csv")
+write_csv(BDD, "Bdd/BDD.csv")
