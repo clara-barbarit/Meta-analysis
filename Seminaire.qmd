@@ -1,0 +1,165 @@
+---
+title: "Méta-analyse : l'effet de la pollution de l'air sur la productivité des travailleurs"
+subtitle: "Présentation"
+author:
+  - name: Clara Barbarit
+    affiliation: OFCE, Sciences Po Paris
+    affiliation-url: http://www.ofce.fr
+institution: "Observatoire Français des Conjonctures Économiques"
+date: 07-06-2026
+lang: fr
+bibliography: Seminaire_references.bib
+toc-depth: 1
+format: 
+  pres-revealjs: default
+  # slide-level niveau des slides à prendre en compte (2 par défaut)
+  # utiliser set_fontsize_reveal(chemin, 32) pour changer la taille des caractères
+---
+
+```{r, include=FALSE}
+ofce::init_qmd()
+```
+
+# Contexte
+
+## Evaluation du Plan Climat 2024-2030 de la Ville de Paris
+
+<br><br> <!--# pour insérer des lignes -->
+
+### Quantification des co-bénéfices du Plan Climat
+
+= "traduction en termes monétaires des avantages sociaux issus des actions de décarbonation"
+
+Exemples :
+
+- Réduction de la pollution de l'air
+- Réduction de la pollution sonore
+- Amélioration du confort thermique
+
+--\> La prise en compte des co-bénéfices dans l'évaluation des retombées économiques rend le Plan Climat 2024-2030 rentable socialement (à hauteur de 13%) : les dépenses d'investissement sont compensées dès 2030.
+
+::: {style="font-size: 80%;"}
+Source : Anne Épaulard, Gissela Landa, Valentin Laprie. Décarboner Paris: Coûts et Bénéfices. OFCE Policy Brief, 2025, 145, pp.1-16. ⟨hal-05067638⟩
+:::
+
+## 
+
+![](Graph1.png)
+
+## Note de la DG Trésor : les impacts économiques de la pollution de l'air (Février 2026)
+
+<br><br> <!--# pour insérer des lignes -->
+
+### Court terme
+
+- Marge extensive : augmentation de l'absentéisme liée aux maladies cardiovasculaires, respiratoires et aux décès prématurés (≈ 40 000 décès/an en France) (les travailleurs eux-mêmes ou la prise en charge de leur(s) enfant(s) par exemple)
+
+- Marge intensive : diminution de la productivité liée à la dégradation des capacités physiques et cognitives des personnes présentes au travail 
+
+### Long terme
+
+- Diminution de la productivité à long terme : effet négatif sur les performances scolaires (moindre accumulation de capital humain) et sur l'innovation
+
+::: {style="font-size: 80%;"}
+Source : Trésor, Direction générale du. « Pollution de l’air : au-delà des effets sanitaires des répercussions économiques importantes ». Direction générale du Trésor, 5 février 2026.
+:::
+
+# Méta-analyse
+
+## Méta-analyse
+
+<br><br> <!--# pour insérer des lignes -->
+
+### Un double objectif
+
+- Estimer un effet moyen de la pollution de l'air sur la productivité des travailleurs 
+- Expliquer l'hétérogénéité des résultats empiriques dans la littérature
+
+### Etapes
+
+- Revue de la littérature
+- Construction d'une chaine de caractère
+- Screening des articles
+- Construction de la base de données
+- Standardisation des coefficients en élasticités
+- Estimer la méta-régression
+
+# Quelques résultats
+## Quelques résultats
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+bdd <- read_excel("C:/Users/196408/Documents/Seminaire/CR.xlsx")
+
+bdd <- bdd |>
+  filter(!is.na(bdd$IC)) |>
+  mutate(
+    Elasticité = as.numeric(gsub(",", ".", Elasticité)),
+    `Borne inférieure` = as.numeric(gsub(",", ".", `Borne inférieure`)),
+    `Borne supérieure` = as.numeric(gsub(",", ".", `Borne supérieure`))
+  )
+
+bdd <- bdd[-nrow(bdd), ]
+
+library(scales)
+
+plot <- ggplot(bdd, aes(x = Art, y = Elasticité)) +
+  
+  geom_hline(yintercept = 0,
+             linetype = "dashed",
+             color = "grey50") +
+  
+  geom_errorbar(
+    aes(ymin = `Borne inférieure`,
+        ymax = `Borne supérieure`),
+    width = 0.15,
+    linewidth = 0.8
+  ) +
+  
+  geom_point(size = 3, color = "#1F77B4") +
+  
+  scale_y_continuous(
+    labels = label_number(accuracy = 0.001),
+    breaks = seq(-0.20, 0.20, by = 0.05)
+  ) +
+  
+  coord_cartesian(
+    ylim = c(
+      min(bdd$`Borne inférieure`, na.rm = TRUE) - 0.01,
+      max(bdd$`Borne supérieure`, na.rm = TRUE) + 0.01
+    )
+  ) +
+  
+  labs(
+    title = ,
+    x = NULL,
+    y = "Élasticité"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 11
+    ),
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+plot
+```
+
+## Références
+
+::: {style="font-size: 80%;"}
+Anne Épaulard, Gissela Landa, Valentin Laprie. Décarboner Paris: Coûts et Bénéfices. OFCE Policy Brief, 2025, 145, pp.1-16. ⟨hal-05067638⟩
+:::
+
+::: {style="font-size: 80%;"}
+Trésor, Direction générale du. « Pollution de l’air : au-delà des effets sanitaires des répercussions économiques importantes ». Direction générale du Trésor, 5 février 2026.
+:::
