@@ -14,6 +14,7 @@ format:
   pres-revealjs: default
   # slide-level niveau des slides à prendre en compte (2 par défaut)
   # utiliser set_fontsize_reveal(chemin, 32) pour changer la taille des caractères
+  beamer: default
 ---
 
 ```{r, include=FALSE}
@@ -28,7 +29,7 @@ ofce::init_qmd()
 
 ### Quantification des co-bénéfices du Plan Climat
 
-= "traduction en termes monétaires des avantages sociaux issus des actions de décarbonation"
+co-bénéfices = bénéfices coïncidant avec la réduction des GES (Intergovernmental Panel on Climate Change - 2001)
 
 Exemples :
 
@@ -36,15 +37,19 @@ Exemples :
 - Réduction de la pollution sonore
 - Amélioration du confort thermique
 
---\> La prise en compte des co-bénéfices dans l'évaluation des retombées économiques rend le Plan Climat 2024-2030 rentable socialement (à hauteur de 13%) : les dépenses d'investissement sont compensées dès 2030.
+--\> La prise en compte des co-bénéfices dans l'évaluation des retombées économiques permet au Plan Climat 2024-2030 d'être rentable socialement (à hauteur de 13%) : les dépenses d'investissement sont compensées dès 2030.
 
 ::: {style="font-size: 80%;"}
 Source : Anne Épaulard, Gissela Landa, Valentin Laprie. Décarboner Paris: Coûts et Bénéfices. OFCE Policy Brief, 2025, 145, pp.1-16. ⟨hal-05067638⟩
 :::
 
-## 
+##  
 
 ![](Graph1.png)
+
+::: {style="font-size: 80%;"}
+Source : Anne Épaulard, Gissela Landa, Valentin Laprie. Décarboner Paris: Coûts et Bénéfices. OFCE Policy Brief, 2025, 145, pp.1-16. ⟨hal-05067638⟩
+:::
 
 ## Note de la DG Trésor : les impacts économiques de la pollution de l'air (Février 2026)
 
@@ -75,84 +80,37 @@ Source : Trésor, Direction générale du. « Pollution de l’air : au-delà
 - Estimer un effet moyen de la pollution de l'air sur la productivité des travailleurs 
 - Expliquer l'hétérogénéité des résultats empiriques dans la littérature
 
-### Etapes
-
+# La suite
+## La suite
+### Etapes réalisées 
 - Revue de la littérature
-- Construction d'une chaine de caractère
-- Screening des articles
-- Construction de la base de données
-- Standardisation des coefficients en élasticités
-- Estimer la méta-régression
+- Construction de la chaine de caractères
+- Extraction des articles 
+- Screening des articles (abstract et titre)
 
-# Quelques résultats
-## Quelques résultats
+### Prochaines étapes 
+- Screening des articles (texte)
+- Construction de la base de données 
+- Méta-régressions 
 
-```{r}
-library(readxl)
-library(dplyr)
-library(ggplot2)
+# Difficultés 
+## Difficultés 
+<br><br> <!--# pour insérer des lignes -->
 
-bdd <- read_excel("C:/Users/196408/Documents/Seminaire/CR.xlsx")
+### Hétérogénéité dans les mesures de la productivité 
+- Zivin et Neidell (2012) : Pièces récoltées par heure
+- Chang et al. (2016) : Salaire ($) / heure 
+- Chand et al. (2019) : Output / jour
 
-bdd <- bdd |>
-  filter(!is.na(bdd$IC)) |>
-  mutate(
-    Elasticité = as.numeric(gsub(",", ".", Elasticité)),
-    `Borne inférieure` = as.numeric(gsub(",", ".", `Borne inférieure`)),
-    `Borne supérieure` = as.numeric(gsub(",", ".", `Borne supérieure`))
-  )
+### Hétérogénéité dans les mesures de la pollution de l'air 
+- Chang et al. (2016) : PM2.5
+- Lichter et al. (2017) : PM10
+- Zivin et Neidell (2012) : Ozone 
+- Chang et al. (2019) : API
 
-bdd <- bdd[-nrow(bdd), ]
-
-library(scales)
-
-plot <- ggplot(bdd, aes(x = Art, y = Elasticité)) +
-  
-  geom_hline(yintercept = 0,
-             linetype = "dashed",
-             color = "grey50") +
-  
-  geom_errorbar(
-    aes(ymin = `Borne inférieure`,
-        ymax = `Borne supérieure`),
-    width = 0.15,
-    linewidth = 0.8
-  ) +
-  
-  geom_point(size = 3, color = "#1F77B4") +
-  
-  scale_y_continuous(
-    labels = label_number(accuracy = 0.001),
-    breaks = seq(-0.20, 0.20, by = 0.05)
-  ) +
-  
-  coord_cartesian(
-    ylim = c(
-      min(bdd$`Borne inférieure`, na.rm = TRUE) - 0.01,
-      max(bdd$`Borne supérieure`, na.rm = TRUE) + 0.01
-    )
-  ) +
-  
-  labs(
-    title = ,
-    x = NULL,
-    y = "Élasticité"
-  ) +
-  
-  theme_minimal(base_size = 13) +
-  
-  theme(
-    axis.text.x = element_text(
-      angle = 45,
-      hjust = 1,
-      size = 11
-    ),
-    plot.title = element_text(face = "bold"),
-    panel.grid.minor = element_blank()
-  )
-
-plot
-```
+### Solutions potentielles 
+- Standardiser en élasticité 
+- Créer différentes catégories, prises en compte dans la méta-régression 
 
 ## Références
 
@@ -161,5 +119,14 @@ Anne Épaulard, Gissela Landa, Valentin Laprie. Décarboner Paris: Coûts et Bé
 :::
 
 ::: {style="font-size: 80%;"}
+Chang, Tom, Joshua Graff Zivin, Tal Gross, and Matthew Neidell. 2016. "Particulate Pollution and the Productivity of Pear Packers." American Economic Journal: Economic Policy 8 (3): 141–69.
+:::
+
+::: {style="font-size: 80%;"}
+Graff Zivin, Joshua, and Matthew Neidell. 2012. "The Impact of Pollution on Worker Productivity." American Economic Review 102 (7): 3652–73.
+:::
+
+::: {style="font-size: 80%;"}
 Trésor, Direction générale du. « Pollution de l’air : au-delà des effets sanitaires des répercussions économiques importantes ». Direction générale du Trésor, 5 février 2026.
 :::
+
