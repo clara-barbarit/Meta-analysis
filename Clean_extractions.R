@@ -36,6 +36,7 @@ EconLit <- bind_rows(
 )
 
 write_csv(EconLit, "Bdd/EconLit.csv")
+write.xlsx(EconLit, "Bdd/EconLit.xlsx")
 
 Total <- nrow(Scopus) + nrow(EconLit) + nrow(WOS)
 
