@@ -44,3 +44,17 @@ Summary <- data.frame(
 )
 
 kable(Summary)
+
+# Union des bases 
+Screening <- Comparaison %>%
+  filter(
+    asreview_label_Valentin == 1 |
+      asreview_label_Clara == 1
+  )
+
+# Export CSV
+write.csv(
+  Screening,
+  "C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Screening_Scopus.csv",
+  row.names = FALSE
+)
