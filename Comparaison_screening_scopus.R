@@ -3,8 +3,8 @@ library(knitr)
 library(openxlsx)
 
 # Import
-Valentin <- read.csv("C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Scopus.csv")
-Clara <- read.csv("C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Scopus_v2.csv")
+Valentin <- read.csv("Bdd/Asreview/Scopus.csv")
+Clara <- read.csv("Bdd/Asreview/Scopus_v2.csv")
 
 # Comparaison des labels
 Comparaison <- Valentin %>%
@@ -22,13 +22,13 @@ Desaccords <- Comparaison %>%
 # Export
 write.csv(
   Desaccords,
-  "C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Desaccords.csv",
+  "Bdd/Asreview/Desaccords.csv",
   row.names = FALSE
 )
 
 write.xlsx(
   Desaccords,
-  "C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Desaccords.xlsx",
+  "Bdd/Asreview/Desaccords.xlsx",
   row.names = FALSE
 )
 
@@ -55,6 +55,6 @@ Screening <- Comparaison %>%
 # Export CSV
 write.csv(
   Screening,
-  "C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Screening_Scopus.csv",
+  "Bdd/Asreview/Screening_Scopus.csv",
   row.names = FALSE
 )
