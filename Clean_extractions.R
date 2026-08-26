@@ -13,30 +13,30 @@ library(readr)
 
 #1. Web of Science
 
-WOS <- read_excel("Bdd/WoS.xls")
+WOS <- read_excel("WoS.xls")
 
 #2. Scopus
 
-Scopus <- read.csv("Bdd/Scopus.csv")
+Scopus <- read.csv("Scopus.csv")
 
 #3.EconLit
 
 EconLit <- bind_rows(
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026.csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (1).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (2).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (3).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (4).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (5).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (6).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (7).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (8).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (9).csv", col_types = cols(.default = col_character())),
-  read_csv("Bdd/EconLit/EBSCO-Metadata-06_29_2026 (10).csv", col_types = cols(.default = col_character()))
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026.csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (1).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (2).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (3).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (4).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (5).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (6).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (7).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (8).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (9).csv", col_types = cols(.default = col_character())),
+  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (10).csv", col_types = cols(.default = col_character()))
 )
 
-write_csv(EconLit, "Bdd/EconLit.csv")
-write.xlsx(EconLit, "Bdd/EconLit.xlsx")
+write_csv(EconLit, "EconLit.csv")
+write.xlsx(EconLit, "EconLit.xlsx")
 
 Total <- nrow(Scopus) + nrow(EconLit) + nrow(WOS)
 
@@ -135,7 +135,7 @@ EconLit_filtered <- EconLit_clean |>
 
 WOS_EconLit_filtered <- bind_rows(WOS_filtered, EconLit_filtered)
 
-write_csv(WOS_EconLit_filtered, "Bdd/WOS_EconLit_filtered.csv")
+write_csv(WOS_EconLit_filtered, "WOS_EconLit_filtered.csv")
 
 BDD <- bind_rows(Scopus_clean, WOS_filtered, EconLit_filtered)
 
@@ -160,4 +160,4 @@ summary_dedup <- tibble(
 
 kable(summary_dedup)
 
-write_csv(BDD, "Bdd/BDD.csv")
+write_csv(BDD, "BDD.csv")
