@@ -58,3 +58,9 @@ write.csv(
   "C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Screening_Scopus.csv",
   row.names = FALSE
 )
+
+write.xlsx(
+  Screening,
+  "C:/Users/196408/Documents/Meta-analysis/Bdd/Asreview/Screening_Scopus.xlsx",
+  rowNames = FALSE
+)
