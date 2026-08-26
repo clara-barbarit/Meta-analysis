@@ -28,7 +28,7 @@ has_doi <- function(x) {
 }
 
 #Cleaning
-BDD_clean <- BDD |>
+Extraction_clean <- Extraction |>
   mutate(
     Title = normalize_title(Title),
     doi_n = normalize_doi(DOI)
@@ -64,10 +64,10 @@ Snowballing_clean <- Snowballing_clean |>
 #Suppression des doublons par 1)DOI 2)Titre
 Snowballing_filtered <- Snowballing_clean |>
   filter(
-    !(has_doi(doi_n) & doi_n %in% BDD_clean$doi_n)
+    !(has_doi(doi_n) & doi_n %in% Extraction_clean$doi_n)
   ) |>
   filter(
-    !(Title %in% BDD_clean$Title)
+    !(Title %in% Extraction_clean$Title)
   )
 
 #Stats
@@ -90,4 +90,4 @@ summary_snowballing <- tibble(
 
 kable(summary_snowballing)
 
-write_csv(Snowballing, "Snowballing.csv")
+write_csv(Snowballing_filtered, "Snowballing.csv")
