@@ -1,0 +1,493 @@
+---
+title: "Summary stats"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis <- read_xlsx("coef_auteur.xlsx")
+```
+
+# Summary Statistics
+## 1.Data
+
+### 1.1. Development
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(development) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Development", "Number")
+  )
+```
+
+### 1.2. Country
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(data_country) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Country", "Number")
+  )
+```
+
+-> regrouper en pays développés / pays en développemment?
+-> regrouper par niveau de PM2.5? (https://www.iqair.com/fr/world-air-quality, https://www.iqair.com/fr/world-most-polluted-countries, https://donnees.banquemondiale.org/indicateur/EN.ATM.PM25.MC.ZS)
+
+### 1.3. Data frequency
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(data_frequency) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Data frequency", "Number")
+  )
+```
+
+### 1.4. Urban / Rural
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(urban_rural) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Urban / Rural", "Number")
+  )
+```
+
+### 1.5. Explanatory var
+#### 1.5.1 Exposure measure
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(exposure_measure) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Exposure measure", "Number")
+  )
+```
+
+#### 1.5.2. Indoor/outdoor
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(indoor_outdoor) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Indoor / Outdoor", "Number")
+  )
+```
+
+#### 1.5.3. Pollutant
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(pollutant) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Pollutant type", "Number")
+  )
+```
+
+#### 1.5.4. Exposure assignment 
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(exposure_assignment) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Exposure assignment", "Number")
+  )
+```
+
+### 1.6. Outcome 
+
+#### 1.6.1. Outcome level
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(outcome_level) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Outcome level", "Number")
+  )
+```
+
+-> regroupement : garder individual & firm 
+region (city, county, employment area, region)
+output?
+
+#### 1.6.2. Sector
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(sector) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Sector", "Number")
+  )
+```
+
+-> 4 sous groupes : industry, service, sport, agri
+
+#### 1.6.3. Outcome type
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(outcome_type) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Outcome type", "Number")
+  )
+```
+
+
+#### 1.6.4. Margin
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(margin) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Margin", "Number")
+  )
+```
+
+#### 1.6.5. Task type
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(task_type) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Task type", "Number")
+  )
+```
+
+#### 1.6.6. Skill level
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(skill_level) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Skill level", "Number")
+  )
+```
+
+
+## 2. Econometric specification 
+
+### 2.1. Endogeneity
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(endogeneity_addressed) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Endogeneity addressed", "Number")
+  )
+```
+
+### 2.3. Id strategy
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(id_strategy) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Id strategy", "Number")
+  )
+```
+
+### 2.4. Instrument type
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(instrument_type) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Instrument type", "Number")
+  )
+```
+
+### 2.5. FE
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(fixed_effects) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("FE", "Number")
+  )
+```
+
+## 3. Controls 
+
+### 3.1. Weather controls
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(controls_weather) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Weather controls", "Number")
+  )
+```
+
+### 3.2. Weather type
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(controls_weather_type) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Weather type", "Number")
+  )
+```
+
+
+### 3.3. Control multipollutant
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(controls_multipollutant) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Control multipollutant", "Number")
+  )
+```
+
+### 3.4. Control multipollutant type
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(controls_multipollutant_type) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Control multipollutant type", "Number")
+  )
+```
+
+### 3.5. Functional form
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(functional_form) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Functional form", "Number")
+  )
+```
+
+## 4. Size effect
+### 4.1. Effect type raw
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(effect_type_raw) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Effect type", "Number")
+  )
+```
+
+### 4.2. Effect scale
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+bdd_bis |>
+  group_by(effect_scale) |>
+  summarise(
+    Number = n(),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Effect scale", "Number")
+  )
+```
+
+### 4.3 Distribution élasticité (w/ HeyesEtAl2016)
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 9
+#| fig-height: 12
+bdd_bis |>
+  mutate(
+    IC_inf = elasticity - 1.96 * se_elasticity,
+    IC_sup = elasticity + 1.96 * se_elasticity
+  ) |>
+  filter(study_id != "HeyesEtAl2016") |>
+  ggplot(aes(y=study_id, x=elast_reoriented, color = pollutant)) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed",
+    linewidth = 0.5
+  ) +
+   geom_errorbar(
+    aes(xmin = IC_inf, xmax = IC_sup),
+    height = 0.2,
+    linewidth = 0.7
+  ) +
+    geom_point(
+    size = 3
+  ) +
+    labs(
+    x = "Élasticité estimée",
+    y = "Étude avec X = PM2.5"
+  ) +
+    labs(
+    x = "Élasticité estimée",
+    y = "Étude",
+    color = "Polluant"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    axis.text.y = element_text(size = 9),
+    legend.position = "bottom"
+  )
+```
+
+
+
+
+
