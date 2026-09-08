@@ -30,8 +30,8 @@ edge [
 
 id_label [
   label = 'IDENTIFICATION',
-  fillcolor = '#FCE4C4',
-  color = '#E67E22',
+  fillcolor = '#F2F2F2',
+  color = '#4575B4',
   fontsize = 14,
   width = 1.2,
   height = 0.8
@@ -39,8 +39,8 @@ id_label [
 
 screen_label [
   label = 'SCREENING',
-  fillcolor = '#DFF2D8',
-  color = '#4C9A2A',
+  fillcolor = '#F2F2F2',
+  color = '#D6604D',
   fontsize = 14,
   width = 1.1,
   height = 1.7
@@ -48,8 +48,8 @@ screen_label [
 
 inc_label [
   label = 'INCLUDED',
-  fillcolor = '#DCEEFF',
-  color = '#2E75B6',
+  fillcolor = '#F2F2F2',
+  color = '#66A61E',
   fontsize = 14,
   width = 1.0,
   height = 0.8
@@ -62,8 +62,8 @@ database [
   - Web of Science : n = 886<br/>
   - EconLit : n = 515
   >,
-  fillcolor = '#FCE4C4',
-  color = '#E67E22',
+  fillcolor = '#F2F2F2',
+  color = '#4575B4',
   width = 4.7
 ]
 
@@ -73,8 +73,8 @@ duplicates [
   duplicates<br/>
   n = 567
   >,
-  fillcolor = '#FCE4C4',
-  color = '#E67E22',
+  fillcolor = '#F2F2F2',
+  color = '#4575B4',
   width = 2.8
 ]
 
@@ -83,8 +83,8 @@ titleabs [
   <b>Articles screened by title &amp; abstract</b><br/><br/>
   n = 1623
   >,
-  fillcolor = '#DFF2D8',
-  color = '#4C9A2A',
+  fillcolor = '#F2F2F2',
+  color = '#D6604D',
   width = 4.7
 ]
 
@@ -96,8 +96,8 @@ excl_titleabs [
   - Critère 2<br/>
   - Critère 3
   >,
-  fillcolor = '#DFF2D8',
-  color = '#4C9A2A',
+  fillcolor = '#F2F2F2',
+  color = '#D6604D',
   width = 3.0
 ]
 
@@ -106,8 +106,8 @@ fulltext [
   <b>Articles screened by full text</b><br/><br/>
   n = 175
   >,
-  fillcolor = '#DFF2D8',
-  color = '#4C9A2A',
+  fillcolor = '#F2F2F2',
+  color = '#D6604D',
   width = 4.7
 ]
 
@@ -119,18 +119,28 @@ excl_fulltext [
   - Critère 2<br/>
   - Critère 3
   >,
-  fillcolor = '#DFF2D8',
-  color = '#4C9A2A',
+  fillcolor = '#F2F2F2',
+  color = '#D6604D',
   width = 3.0
+]
+
+forward_backward [
+  label = <
+  <b>Articles identified by forward <br/> and backward searching</b><br/>
+  n = 2673
+  >,
+  fillcolor = '#F2F2F2',
+  color = '#4575B4',
+  width = 4.7
 ]
 
 snowball [
   label = <
-  <b>Articles identified<br/>by snowballing</b><br/>
+  <b>Articles selected<br/>by forward and backward <br/> searching</b><br/>
   n = 8
   >,
-  fillcolor = '#DFF2D8',
-  color = '#4C9A2A',
+  fillcolor = '#F2F2F2',
+  color = '#D6604D',
   width = 2.4
 ]
 
@@ -139,8 +149,8 @@ included [
   <b>Articles included in the meta-analysis</b><br/><br/>
   n = 46
   >,
-  fillcolor = '#DCEEFF',
-  color = '#2E75B6',
+  fillcolor = '#F2F2F2',
+  color = '#66A61E',
   width = 4.7
 ]
 
@@ -152,7 +162,7 @@ point_join [
   style = invis
 ]
 
-{rank = same; id_label; database; duplicates}
+{rank = same; id_label; database; duplicates; forward_backward}
 {rank = same; screen_label; titleabs; excl_titleabs}
 {rank = same; fulltext; excl_fulltext; snowball}
 {rank = same; inc_label; included}
@@ -162,6 +172,8 @@ screen_label -> inc_label [style = invis]
 
 database -> duplicates
 database -> titleabs
+
+forward_backward -> snowball
 
 titleabs -> fulltext
 titleabs -> excl_titleabs
