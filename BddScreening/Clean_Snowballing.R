@@ -1,10 +1,11 @@
 #Packages
 library(readr)
 library(tidyverse)
+library(knitr)
 
 #Bases de données
-Extraction <- read.csv("BDD.csv")
-Snowballing <- read_csv("snowballing_extraction.csv")
+Extraction <- read.csv("BddScreening/BDD.csv")
+Snowballing <- read_csv("BddScreening/snowballing_extraction.csv")
 
 #Fonctions
 normalize_title <- function(x) {

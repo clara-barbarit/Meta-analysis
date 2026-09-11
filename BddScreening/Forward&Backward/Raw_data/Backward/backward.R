@@ -28,7 +28,7 @@ B <- lapply(
   1:37,
   function(i) {
     read.csv(
-      paste0("Backward/B", i, ".csv"),
+      paste0("BddScreening/Backward/B", i, ".csv"),
       stringsAsFactors = FALSE
     )
   }
@@ -59,15 +59,55 @@ names(B_clean) <- paste0("B", 1:37)
 Backward_all <- bind_rows(B_clean)
 
 # 5. Suppression des doublons
-Backward_final <- Backward_all |>
+Backward_clean <- Backward_all |>
   filter(
     !(has_doi(doi_n) & duplicated(doi_n))
   ) |>
   distinct(Title, .keep_all = TRUE)
 
+#Doublons search string
+
+
+Extraction <- read.csv("BddScreening/BDD.csv")
+
+Extraction_clean <- Extraction |>
+  mutate(
+    Title = normalize_title(Title),
+    doi_n = normalize_doi(DOI)
+  )
+
+Backward_final <- Backward_clean |>
+  filter(
+    !(has_doi(doi_n) & doi_n %in% Extraction_clean$doi_n)
+  ) |>
+  filter(
+    !(Title %in% Extraction_clean$Title)
+  )
+
+#Stats
+n_snowballing <- nrow(Backward_all)
+
+n_doublons <- n_snowballing - nrow(Backward_final)
+
+summary_snowballing <- tibble(
+  Indicateur = c(
+    "Articles issus du snowballing",
+    "Articles déjà présents dans BDD",
+    "Nouveaux articles issus du snowballing"
+  ),
+  Valeur = c(
+    n_snowballing,
+    n_doublons,
+    nrow(Backward_final)
+  )
+)
+
+kable(summary_snowballing)
+
+
 # 6. Export
 
 write_csv(
   Backward_final,
-  "Backward/Backward_final.csv"
+  "BddScreening/Backward/Backward_final.csv"
 )

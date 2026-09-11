@@ -13,34 +13,31 @@ library(readr)
 
 #1. Web of Science
 
-WOS <- read_excel("WoS.xls")
+WOS <- read_excel("BddScreening/Strings/Raw_data/WoS.xls")
 
 #2. Scopus
 
-Scopus <- read.csv("Scopus.csv")
+Scopus <- read.csv("BddScreening/Strings/Raw_data/Scopus.csv")
 
 #3.EconLit
 
 EconLit <- bind_rows(
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026.csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (1).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (2).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (3).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (4).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (5).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (6).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (7).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (8).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (9).csv", col_types = cols(.default = col_character())),
-  read_csv("EconLit/EBSCO-Metadata-06_29_2026 (10).csv", col_types = cols(.default = col_character()))
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026.csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (1).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (2).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (3).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (4).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (5).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (6).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (7).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (8).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (9).csv", col_types = cols(.default = col_character())),
+  read_csv("BddScreening/Strings/Raw_data/EconLit/EBSCO-Metadata-06_29_2026 (10).csv", col_types = cols(.default = col_character()))
 )
 
-write_csv(EconLit, "EconLit.csv")
-write.xlsx(EconLit, "EconLit.xlsx")
+write_csv(EconLit, "BddScreening/Strings/Raw_data/EconLit.csv")
 
-Total <- nrow(Scopus) + nrow(EconLit) + nrow(WOS)
-
-# II - Nettoyage des bases
+# II - Data cleaning
 
 normalize_title <- function(x) {
   x |>
@@ -57,11 +54,10 @@ normalize_doi <- function(x) {
     str_trim()
 }
 
-#Est-ce que le DOI est exploitable ? 
 has_doi <- function(x) !is.na(x) & x != ""
 
 
-# Scopus
+#1. Scopus
 Scopus_clean <- Scopus |>
   transmute(
     Authors.full.names = Author.full.names,
@@ -79,7 +75,7 @@ Scopus_clean <- Scopus |>
     Document.Type = Document.Type
   )
 
-# EconLit
+#2. EconLit
 EconLit_clean <- EconLit |>
   transmute(
     Authors.full.names = contributors,
@@ -97,7 +93,7 @@ EconLit_clean <- EconLit |>
     Document.Type = docTypes
   )
 
-# WOS
+#3. WOS
 WOS_clean <- WOS |>
   transmute(
     Authors.full.names = `Author Full Names`,
@@ -116,7 +112,7 @@ WOS_clean <- WOS |>
   )
 
 
-# Fusion + suppression des doublons
+#4. Duplicates removing
 
 Scopus_clean  <- Scopus_clean  |> mutate(doi_n = normalize_doi(DOI))
 WOS_clean     <- WOS_clean     |> mutate(doi_n = normalize_doi(DOI))
@@ -133,26 +129,28 @@ EconLit_filtered <- EconLit_clean |>
   filter(!(has_doi(doi_n) & doi_n %in% doi_deja)) |>
   filter(!(Title %in% titre_deja))
 
-WOS_EconLit_filtered <- bind_rows(WOS_filtered, EconLit_filtered)
+# III - Final dataset from first strings screening
 
-write_csv(WOS_EconLit_filtered, "WOS_EconLit_filtered.csv")
+First_screening_cleaned <- bind_rows(Scopus_clean, WOS_filtered, EconLit_filtered)
 
-BDD <- bind_rows(Scopus_clean, WOS_filtered, EconLit_filtered)
+write_csv(First_screening_cleaned, "BddScreening/Strings/First_screening_cleaned.csv")
 
-#Il faut aussi supprimer les doublons internes à chaque base, pas seulement d'une base à l'autre
-BDD <- BDD |>
+# IV - Removing intern duplicates 
+First_screening_cleaned <- First_screening_cleaned |>
   filter(!(has_doi(doi_n) & duplicated(doi_n))) |>
   distinct(Title, .keep_all = TRUE)
 
-Merge <- nrow(BDD)
+# V - Summary stats 
+
+Merge <- nrow(First_screening_cleaned)
 
 Total <- nrow(Scopus) + nrow(EconLit) + nrow(WOS)
 
 summary_dedup <- tibble(
   Indicateur = c(
-    "Nombre total d'articles (3 bases)",
-    "Nombre d'articles après suppression des doublons",
-    "Doublons supprimés"),
+    "Total of screened articles (3 databases)",
+    "Screened articles after removing duplicates",
+    "Number of articles removed"),
   Valeur = c(
     Total,
     Merge,
@@ -160,4 +158,4 @@ summary_dedup <- tibble(
 
 kable(summary_dedup)
 
-write_csv(BDD, "BDD.csv")
+

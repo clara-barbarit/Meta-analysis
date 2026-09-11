@@ -3,8 +3,8 @@ library(readr)
 library(tidyverse)
 
 #Bases de données
-Backward <- read.csv("Backward/Backward_final.csv")
-Snowballing <- read_csv("Snowballing.csv")
+Backward <- read.csv("BddScreening/Backward/Backward_final.csv")
+Snowballing <- read_csv("BddScreening/Snowballing.csv")
 All <- bind_rows(Backward, Snowballing)
 
 #Suppression des doublons
