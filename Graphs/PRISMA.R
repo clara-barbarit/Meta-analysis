@@ -127,7 +127,7 @@ excl_fulltext [
 forward_backward [
   label = <
   <b>Articles identified by forward <br/> and backward searching</b><br/>
-  n = 2673
+  n = 2693
   >,
   fillcolor = '#F2F2F2',
   color = '#4575B4',

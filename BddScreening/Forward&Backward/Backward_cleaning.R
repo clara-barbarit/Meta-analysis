@@ -1,4 +1,6 @@
 library(tidyverse)
+library(dplyr)
+library(knitr)
 
 # 1. Fonctions de normalisation
 
@@ -28,7 +30,7 @@ B <- lapply(
   1:37,
   function(i) {
     read.csv(
-      paste0("BddScreening/Backward/B", i, ".csv"),
+      paste0("BddScreening/Forward&Backward/Raw_data/Backward/B", i, ".csv"),
       stringsAsFactors = FALSE
     )
   }
@@ -67,13 +69,12 @@ Backward_clean <- Backward_all |>
 
 #Doublons search string
 
-
-Extraction <- read.csv("BddScreening/BDD.csv")
+Extraction <- read.csv("BddScreening/Asreview/Result_First_Screening.csv")
 
 Extraction_clean <- Extraction |>
   mutate(
     Title = normalize_title(Title),
-    doi_n = normalize_doi(DOI)
+    doi_n = normalize_doi(DOI_Valentin)
   )
 
 Backward_final <- Backward_clean |>
@@ -109,5 +110,5 @@ kable(summary_snowballing)
 
 write_csv(
   Backward_final,
-  "BddScreening/Backward/Backward_final.csv"
+  "BddScreening/Forward&Backward/Backward_cleaned.csv"
 )

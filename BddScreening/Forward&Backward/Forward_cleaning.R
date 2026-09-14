@@ -4,8 +4,8 @@ library(tidyverse)
 library(knitr)
 
 #Bases de données
-Extraction <- read.csv("BddScreening/BDD.csv")
-Snowballing <- read_csv("BddScreening/snowballing_extraction.csv")
+Extraction <- read.csv("BddScreening/Asreview/Result_First_Screening.csv")
+Forward <- read_csv("BddScreening/Forward&Backward/Raw_data/Forward.csv")
 
 #Fonctions
 normalize_title <- function(x) {
@@ -32,10 +32,10 @@ has_doi <- function(x) {
 Extraction_clean <- Extraction |>
   mutate(
     Title = normalize_title(Title),
-    doi_n = normalize_doi(DOI)
+    doi_n = normalize_doi(DOI_Valentin)
   )
 
-Snowballing_clean <- Snowballing |>
+Forward_clean <- Forward |>
   transmute(
     Authors.full.names = Author,
     Title = normalize_title(Title),
@@ -55,7 +55,7 @@ Snowballing_clean <- Snowballing |>
     doi_n = normalize_doi(DOI)
   )
 
-Snowballing_clean <- Snowballing_clean |>
+Forward_clean <- Forward_clean |>
   filter(
     !(has_doi(doi_n) & duplicated(doi_n))
   ) |>
@@ -63,7 +63,7 @@ Snowballing_clean <- Snowballing_clean |>
 
 
 #Suppression des doublons par 1)DOI 2)Titre
-Snowballing_filtered <- Snowballing_clean |>
+Forward_filtered <- Forward_clean |>
   filter(
     !(has_doi(doi_n) & doi_n %in% Extraction_clean$doi_n)
   ) |>
@@ -72,23 +72,23 @@ Snowballing_filtered <- Snowballing_clean |>
   )
 
 #Stats
-n_snowballing <- nrow(Snowballing_clean)
+n_forward <- nrow(Forward_clean)
 
-n_doublons <- n_snowballing - nrow(Snowballing_filtered)
+n_doublons <- n_forward - nrow(Forward_filtered)
 
-summary_snowballing <- tibble(
+summary_forward <- tibble(
   Indicateur = c(
-    "Articles issus du snowballing",
+    "Articles issus de forward searching",
     "Articles déjà présents dans BDD",
-    "Nouveaux articles issus du snowballing"
+    "Nouveaux articles issus de forward"
   ),
   Valeur = c(
-    n_snowballing,
+    n_forward,
     n_doublons,
-    nrow(Snowballing_filtered)
+    nrow(Forward_filtered)
   )
 )
 
-kable(summary_snowballing)
+kable(summary_forward)
 
-write_csv(Snowballing_filtered, "Snowballing.csv")
+write_csv(Forward_filtered, "BddScreening/Forward&Backward/Forward_cleaned.csv")
