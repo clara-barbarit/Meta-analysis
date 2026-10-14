@@ -3,14 +3,15 @@ library(dplyr)
 library(ggplot2)
 library(tidyverse)
 library(readxl)
-library(knitr)
 
 #Loading the dataset
 Df <- read_xlsx("Data_description/Codage_articles.xlsx")
 
 #Cleaning the dataset
 Df_clean <- Df |>
-  select(-c(effect_raw, 
+  select(-c(source_db,
+            n_citations,
+            effect_raw, 
             se_raw,
             p_value, 
             ci_low, 
@@ -22,8 +23,8 @@ Df_clean <- Df |>
             se_source, 
             elasticity, 
             test_calcul_elasticity, 
-            verif_elasticity, 
-            se_elasticity, 
+            verif_elasticity,
+            test_calcul_se,
             latent_variable, 
             CHECK, 
             poll_mean_elasticity, 
@@ -31,6 +32,7 @@ Df_clean <- Df |>
             poll_min, 
             poll_max, 
             outcome_estimated_mean,
+            outcome_mean,
             outcome_sd, 
             outcome_min, 
             outcome_max, 
@@ -43,7 +45,15 @@ Df_clean <- Df |>
             notes
             )) |>
   mutate(pcc = pcc_reoriented, 
-         elasticity = elast_reoriented
+         elasticity = elast_reoriented,
+         outcome_category = `outcome category`
          )|>
   select(-c(pcc_reoriented, 
-            elast_reoriented))
+            elast_reoriented,
+            "outcome category"))
+
+write.csv(
+  Df_clean,
+  "Data_description/Df_clean.csv",
+  row.names = FALSE
+)
