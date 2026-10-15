@@ -7,7 +7,6 @@ library(gt)
 
 Df_table2 <- read_csv("Data_description/Df_clean.csv") |>
   filter(!is.na(study_id)) |>
-  filter(!study_id=="Sarmiento2021") |>
   group_by(study_id) |>
   mutate(weight = 1 / n()) |>
   ungroup()
@@ -258,7 +257,7 @@ stats_categorical <- function(data, variables, groups, panel) {
     
     values <- as.character(data[[v]])
     
-    values[is.na(values) | values == ""] <- "Not reported"
+    values[is.na(values) | values == ""] <- "NA"
     
     modalities <- unique(values)
     

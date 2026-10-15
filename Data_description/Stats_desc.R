@@ -45,42 +45,20 @@ Aesthetic <- function(gt_tbl) {
 
 # --- Descriptive statistical calculations : Categorical variables --- 
 stats_cat <- function(data, var, etude = NULL) {
-  total_lignes <- nrow(data)
-  total_etudes <- if (is.null(etude)) NA_integer_ else n_distinct(data[[etude]])
   
-  out <- data |>
-    mutate(modalite = coalesce(as.character(.data[[var]]), "Missing")) |>
-    group_by(modalite) |>
+  data |>
+    group_by(.data[[var]]) |>
     summarise(
       n_lignes = n(),
-      n_etudes = if (is.null(etude)) NA_integer_ else n_distinct(.data[[etude]]),
+      n_etudes = n_distinct(.data[[etude]]),
       .groups = "drop"
     ) |>
     mutate(
-      pct_lignes = round(100 * n_lignes / total_lignes, 1),
-      pct_etudes = round(100 * n_etudes / total_etudes, 1)
+      pct_lignes = round(100 * n_lignes / nrow(data), 1),
+      pct_etudes = round(100 * n_etudes / n_distinct(data[[etude]]), 1)
     ) |>
-    select(modalite, n_lignes, pct_lignes, n_etudes, pct_etudes) |>
+    select(all_of(var), n_lignes, pct_lignes, n_etudes, pct_etudes) |>
     arrange(desc(n_lignes))
-  
-  if (is.null(etude)) out <- select(out, -n_etudes, -pct_etudes)
-  out
-}
-
-# --- Descriptive statistical calculations : Numerical variables --- 
-stats_num <- function(data, vars) {
-  map_dfr(vars, function(v) {
-    x <- data[[v]]
-    tibble(
-      variable = v,
-      n        = sum(!is.na(x)),
-      manquant = sum(is.na(x)),
-      moy_et   = sprintf("%.2f (%.2f)", mean(x, na.rm = TRUE), sd(x, na.rm = TRUE)),
-      mediane  = sprintf("%.2f [%.2f–%.2f]", median(x, na.rm = TRUE),
-                         quantile(x, .25, na.rm = TRUE), quantile(x, .75, na.rm = TRUE)),
-      min_max  = sprintf("%.2f – %.2f", min(x, na.rm = TRUE), max(x, na.rm = TRUE))
-    )
-  })
 }
 
 # --- Descriptive statistical calculations : Dummy variables --- 
@@ -111,14 +89,14 @@ stats_dummy <- function(data, vars, etude = NULL) {
 
 tableau_pub_status <-
   stats_cat(Df, "pub_status", etude = "study_id") |>
-  mutate(modalite = recode(modalite,
+  mutate(pub_status = recode(pub_status,
                            "published"     = "Published",
                            "working_paper" = "Working paper",
                            "unpublished"   = "Unpublished",
                            "Missing"       = "Not reported")) |>
   gt() |>
   cols_label(
-    modalite   = "Publication status",
+    pub_status   = "Publication status",
     n_lignes   = "Number of Estimates",
     pct_lignes = "% of Estimates",
     n_etudes   = "Number of Studies",
@@ -135,13 +113,13 @@ tableau_country <-
   stats_cat(Df, "data_country", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Country",
+    data_country   = "Country",
     n_lignes   = "Number of Estimates",
     pct_lignes = "% of Estimates",
     n_etudes   = "Number of Studies",
     pct_etudes = "% of Studies"
   ) |>
-  tab_header(title = "Distribution of Publication Status Across Included Studies") |>
+  tab_header(title = "Distribution of Data Country Across Included Studies") |>
   Aesthetic()
 
 tableau_country
@@ -152,7 +130,7 @@ tableau_development <-
   stats_cat(Df, "development", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Country",
+    development   = "Country",
     n_lignes   = "Number of Estimates",
     pct_lignes = "% of Estimates",
     n_etudes   = "Number of Studies",
@@ -169,7 +147,7 @@ tableau_effect_type <-
   stats_cat(Df, "effect_type_raw", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Effect type raw",
+    effect_type_raw   = "Effect type raw",
     n_lignes   = "Number of Estimates",
     pct_lignes = "% of Estimates",
     n_etudes   = "Number of Studies",
@@ -209,7 +187,7 @@ tableau_pollutants <-
   stats_cat(Df, "pollutant", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    pollutant   = "Pollutant",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -225,13 +203,13 @@ tableau_pollutants
 
 tableau_exp_measure <-
   stats_cat(Df, "exposure_measure", etude = "study_id") |>
-  mutate(modalite = recode(modalite,
+  mutate(exposure_measure = recode(exposure_measure,
                            "fixed_station" = "Fixed Station",
                            "satellite" = "Satellite",
                            "Missing"       = "NA")) |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    exposure_measure   = "Exposure Measure",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -248,7 +226,7 @@ tableau_in_out <-
   stats_cat(Df, "indoor_outdoor_measure", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    indoor_outdoor_measure   = "Indoor / Outdoor",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -265,7 +243,7 @@ tableau_outcome_cat <-
   stats_cat(Df, "outcome_category", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    outcome_category   = "Outcome Category",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -282,7 +260,7 @@ tableau_outcome_level <-
   stats_cat(Df, "outcome_level", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    outcome_level   = "Outcome level",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -299,7 +277,7 @@ tableau_task_type <-
   stats_cat(Df, "task_type", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    task_type   = "Task Type",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -316,7 +294,7 @@ tableau_sector <-
   stats_cat(Df, "sector", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    sector   = "Sector",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -333,14 +311,13 @@ tableau_urban_rural <-
   stats_cat(Df, "urban_rural", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
-    n_lignes   = "Number of Estimators",
+    urban_rural = "Urban / Rural",
+    n_lignes = "Number of Estimators",
     pct_lignes = "% of Estimators",
-    n_etudes   = "Number of Studies",
+    n_etudes = "Number of Studies",
     pct_etudes = "% of Studies"
   ) |>
-  tab_header(title = "Distribution of Rural / Urban Across Included Studies") |>
-  Aesthetic()
+  tab_header(title = "Distribution of Rural / Urban Across Included Studies")
 
 tableau_urban_rural
 
@@ -371,7 +348,7 @@ tableau_time_freq <-
   stats_cat(Df, "time_frequency_observation", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    time_frequency_observation   = "Time frequency",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -388,7 +365,7 @@ tableau_data_structure <-
   stats_cat(Df, "data_structure", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    data_structure   = "Data Structure",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -405,7 +382,7 @@ tableau_id_strat <-
   stats_cat(Df, "id_strategy", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    id_strategy   = "Identification Strategy",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
@@ -422,7 +399,7 @@ tableau_instrument <-
   stats_cat(Df, "instrument_type", etude = "study_id") |>
   gt() |>
   cols_label(
-    modalite   = "Pollutant",
+    instrument_type   = "Instrument Type",
     n_lignes   = "Number of Estimators",
     pct_lignes = "% of Estimators",
     n_etudes   = "Number of Studies",
