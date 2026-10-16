@@ -48,7 +48,24 @@ Df_clean <- Df |>
          )|>
   select(-c(pcc_reoriented, 
             elast_reoriented,
-            "outcome category"))
+            "outcome category")) |>
+  mutate(
+    id_strategy = case_match(
+      id_strategy,
+      "LPM" ~ "OLS",
+      .default = id_strategy
+    ),
+    data_structure = case_match(
+      data_structure,
+      "time serie" ~ "time_serie",
+      .default = data_structure
+    ),
+    outcome_category = case_match(
+      outcome_category,
+      "financial index" ~ "financial_index",
+      .default = outcome_category
+    )
+  )
 
 write.csv(
   Df_clean,
