@@ -552,3 +552,51 @@ gtsave(
 )
 
 Table2_gt
+
+
+diagnostic_poids <- Df_table2 |>
+  mutate(
+    poids_n = weight,
+    poids_SE = if_else(
+      is.finite(se_elasticity) & se_elasticity > 0,
+      1 / se_elasticity,
+      NA_real_
+    ),
+    poids_SE2 = if_else(
+      is.finite(se_elasticity) & se_elasticity > 0,
+      1 / se_elasticity^2,
+      NA_real_
+    )
+  ) |>
+  group_by(study_id) |>
+  summarise(
+    n_estimations = n(),
+    
+    n_poids_n_invalides = sum(
+      !is.finite(poids_n) | poids_n <= 0
+    ),
+    
+    n_SE_manquantes = sum(is.na(se_elasticity)),
+    n_SE_non_finies = sum(!is.finite(se_elasticity)),
+    n_SE_nulles_ou_negatives = sum(
+      is.finite(se_elasticity) & se_elasticity <= 0
+    ),
+    
+    n_poids_SE_invalides = sum(
+      !is.finite(poids_SE) | poids_SE <= 0
+    ),
+    
+    n_poids_SE2_invalides = sum(
+      !is.finite(poids_SE2) | poids_SE2 <= 0
+    ),
+    
+    .groups = "drop"
+  ) |>
+  filter(
+    n_poids_n_invalides > 0 |
+      n_poids_SE_invalides > 0 |
+      n_poids_SE2_invalides > 0
+  )
+
+diagnostic_poids
+

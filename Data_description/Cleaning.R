@@ -10,7 +10,7 @@ Df <- read_xlsx("Data_description/Codage_articles.xlsx")
 #Cleaning the dataset
 Df_clean <- Df |>
   select(-c(source_db,
-            n_citations,
+            peer_reviewed,
             effect_raw, 
             se_raw,
             p_value, 
@@ -28,11 +28,9 @@ Df_clean <- Df |>
             latent_variable, 
             CHECK, 
             poll_mean_elasticity, 
-            poll_sd, 
             poll_min, 
             poll_max, 
             outcome_estimated_mean,
-            outcome_mean,
             outcome_sd, 
             outcome_min, 
             outcome_max, 

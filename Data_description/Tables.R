@@ -68,7 +68,7 @@ tab <- tableau_pollutants |>
 
 tab
 
-#3.1.Development
+#3.2.Development
 bdd |>
   group_by(development) |>
   summarise(
@@ -78,7 +78,7 @@ bdd |>
   arrange(desc(nb_etudes)) |>
   kable()
 
-#3.2.Country
+#3.3.Country
 bdd |>
   group_by(data_country) |>
   summarise(
@@ -88,7 +88,7 @@ bdd |>
   arrange(desc(nb_etudes)) |>
   kable()
 
-#3.3.Endogeneity 
+#3.4.Endogeneity 
 bdd |>
   group_by(endogeneity_addressed) |>
   summarise(
@@ -98,7 +98,7 @@ bdd |>
   arrange(desc(nb_etudes)) |>
   kable()
 
-#3.4.Weather
+#3.5.Weather
 bdd |>
   group_by(controls_weather) |>
   summarise(
@@ -108,7 +108,7 @@ bdd |>
   arrange(desc(nb_etudes)) |>
   kable()
 
-#3.5.Exposure measure
+#3.6.Exposure measure
 bdd |>
   group_by(exposure_measure) |>
   summarise(
@@ -118,7 +118,7 @@ bdd |>
   arrange(desc(nb_etudes)) |>
   kable()
 
-#3.6.Indoor/Outdoor
+#3.7.Indoor/Outdoor
 bdd |>
   group_by(indoor_outdoor) |>
   summarise(
@@ -128,7 +128,7 @@ bdd |>
   arrange(desc(nb_etudes)) |>
   kable()
 
-#3.7.Outcome level
+#3.8.Outcome level
 bdd |>
   group_by(outcome_level) |>
   summarise(
@@ -138,9 +138,20 @@ bdd |>
   arrange(desc(nb_etudes)) |>
   kable()
 
-#3.8.Secteur
+#3.9.Secteur
 bdd |>
   group_by(sector) |>
+  summarise(
+    nb_lignes = n(),
+    nb_etudes = n_distinct(study_id)
+  ) |>
+  arrange(desc(nb_etudes)) |>
+  kable()
+
+#3.10. Instrument
+bdd |>
+  filter(instrument_type != "none") |>
+  group_by(instrument_type) |>
   summarise(
     nb_lignes = n(),
     nb_etudes = n_distinct(study_id)
