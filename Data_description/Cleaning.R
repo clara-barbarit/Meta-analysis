@@ -64,6 +64,11 @@ Df_clean <- Df |>
       outcome_category,
       "financial index" ~ "financial_index",
       .default = outcome_category
+    ),
+    outcome_level = case_match(
+      outcome_level,
+      "individual" ~ "worker",
+      .default = outcome_level
     )
   )
 
@@ -72,3 +77,7 @@ write.csv(
   "Data_description/Df_clean.csv",
   row.names = FALSE
 )
+
+Df_clean |>
+  filter(t_stat>-1.96 & t_stat<1.96) |>
+  nrow()

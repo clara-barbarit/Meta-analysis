@@ -1,0 +1,1105 @@
+---
+title: "Descriptive Statistics"
+output: html_document
+date: "2026-10-23"
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+
+library(tidyverse)
+library(gt)
+library(dplyr)
+library(ggplot2)
+
+# ============================================================
+# 1. LOAD AND PREPARE THE DATA
+# ============================================================
+
+Df_table2 <- read_csv(
+  "Df_clean.csv",
+  show_col_types = FALSE
+) |>
+  mutate(
+    id_strategy = case_when(
+      is.na(id_strategy) | id_strategy == "" ~ NA_character_,
+      id_strategy %in% c("OLS", "IV") ~ id_strategy,
+      TRUE ~ "Other"
+    ),
+    
+    # 1 if no fixed effects are included; 0 if at least one is included
+    no_FE = case_when(
+      if_all(
+        all_of(c("worker_FE", "localisation_FE", "time_FE", "firm_FE")),
+        ~ !is.na(.x) & .x == 0
+      ) ~ 1,
+      if_any(
+        all_of(c("worker_FE", "localisation_FE", "time_FE", "firm_FE")),
+        ~ .x == 1
+      ) ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    # Indicators for absence of controls
+    no_weather_controls = case_when(
+      controls_weather == 0 ~ 1,
+      controls_weather == 1 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    no_multiple_pollutants = case_when(
+      controls_multipollutant == 0 ~ 1,
+      controls_multipollutant == 1 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    
+    # Aggregation level: keep Indiv and Firm; all other levels -> Other
+    outcome_level = case_when(
+      is.na(outcome_level) | str_trim(as.character(outcome_level)) == "" ~ NA_character_,
+      str_to_lower(str_trim(as.character(outcome_level))) %in%
+        c("worker", "individual", "individual level") ~ "Worker",
+      str_to_lower(str_trim(as.character(outcome_level))) %in%
+        c("firm", "firm level") ~ "Firm",
+      TRUE ~ "Other"
+    ),
+    
+    # Frequency: keep Daily and Yearly; all other frequencies -> Other
+    time_frequency_observation = case_when(
+      is.na(time_frequency_observation) |
+        str_trim(as.character(time_frequency_observation)) == "" ~ NA_character_,
+      str_to_lower(str_trim(as.character(time_frequency_observation))) == "daily" ~ "Daily",
+      str_to_lower(str_trim(as.character(time_frequency_observation))) == "yearly" ~ "Yearly",
+      TRUE ~ "Other"
+    ),
+    
+    # Any weather controls other than temperature, wind speed and humidity
+    weather_other = case_when(
+      if_any(
+        all_of(c(
+          "control_precipitation",
+          "control_radiation",
+          "control_wind_direction",
+          "control_air_pressure",
+          "control_snow",
+          "control_dew_points",
+          "control_skycover",
+          "control_sunshine"
+        )),
+        ~ !is.na(.x) & .x == 1
+      ) ~ 1,
+      if_all(
+        all_of(c(
+          "control_precipitation",
+          "control_radiation",
+          "control_wind_direction",
+          "control_air_pressure",
+          "control_snow",
+          "control_dew_points",
+          "control_skycover",
+          "control_sunshine"
+        )),
+        ~ !is.na(.x) & .x == 0
+      ) ~ 0,
+      TRUE ~ NA_real_
+    )
+  ) |>
+  filter(!is.na(study_id)) |>
+  group_by(study_id) |>
+  mutate(weight = 1 / n()) |>
+  ungroup()
+
+# Standard-error column
+se_col <- "se_elasticity"
+
+if (!se_col %in% names(Df_table2)) {
+  stop("The column 'se_elasticity' was not found in Df_table2.")
+}
+
+
+# ============================================================
+# 1bis. REMOVE THE TOP AND BOTTOM 5% OF ELASTICITIES
+# ============================================================
+
+# Ensure elasticity is numeric
+Df_table2 <- Df_table2 |>
+  mutate(elasticity = as.numeric(elasticity))
+
+# Calculate the 5th and 95th percentiles
+elasticity_limits <- quantile(
+  Df_table2$elasticity,
+  probs = c(0.05, 0.95),
+  na.rm = TRUE,
+  names = FALSE
+)
+
+lower_bound <- elasticity_limits[1]
+upper_bound <- elasticity_limits[2]
+
+# Keep only elasticities between the two thresholds
+n_before <- nrow(Df_table2)
+
+Df_table2 <- Df_table2 |>
+  filter(
+    is.finite(elasticity),
+    elasticity >= lower_bound,
+    elasticity <= upper_bound
+  ) |>
+  group_by(study_id) |>
+  mutate(weight = 1 / n()) |>
+  ungroup()
+
+n_after <- nrow(Df_table2)
+
+# Report the thresholds and number of observations removed
+cat("5th percentile:", lower_bound, "\n")
+cat("95th percentile:", upper_bound, "\n")
+cat("Observations before trimming:", n_before, "\n")
+cat("Observations after trimming:", n_after, "\n")
+cat("Observations removed:", n_before - n_after, "\n")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# ============================================================
+# A. DESCRIPTIVE STATISTICS
+# ============================================================
+
+# ============================================================
+# 2. DEFINE VARIABLES AND CATEGORIES
+# ============================================================
+
+groups <- tribble(
+  ~variable, ~subcategory, ~order,
+  "data_country", "Country", 1,
+  "development", "Development level", 2,
+  "urban_rural", "Localisation (urban / rural)", 3,
+  "indoor_outdoor", "Indoor or outdoor workers", 4,
+  "age_mean", "Mean Age", 5,
+  "pct_female", "Female", 6,
+  
+  "sector", "Sector", 7,
+  "task_type", "Task type", 8,
+  "outcome_category", "Productivity measures", 9,
+  "outcome_level", "Aggregation level", 10,
+  
+  "pollutant", "Pollution measures", 11,
+  "exposure_measure", "Pollution method measurement", 12,
+  
+  "data_structure", "Data structure", 13,
+  "time_frequency_observation", "Frequency", 14,
+  "effect_type_raw", "Estimation method", 15,
+  "id_strategy", "Identification strategy", 16,
+  
+  "time_FE", "Fixed effects", 17,
+  "worker_FE", "Fixed effects", 17,
+  "firm_FE", "Fixed effects", 17,
+  "localisation_FE", "Fixed effects", 17,
+  "no_FE", "Fixed effects", 17,
+  
+  "controls_weather", "Weather controls", 18,
+  "control_temp", "Weather controls", 18,
+  "control_wind_speed", "Weather controls", 18,
+  "control_humidity", "Weather controls", 18,
+  "weather_other", "Weather controls", 18,
+  "no_weather_controls", "Weather controls", 18,
+  
+  "controls_multipollutant", "Other pollutant controls", 19,
+  "no_multiple_pollutants", "Other pollutant controls", 19,
+  
+  "controls_worker_characteristics", "Other controls", 20,
+  "attendance_bias_treated", "Other controls", 20,
+  "controls_traffic_effect", "Other controls", 20,
+  "controls_demand_effect", "Other controls", 20,
+  "controls_wage_shirking", "Other controls", 20
+)
+
+# ============================================================
+# 3. DEFINE VARIABLE TYPES
+# ============================================================
+
+num <- c("age_mean", "pct_female")
+
+dummy_groups <- c(
+  "Fixed effects",
+  "Weather controls",
+  "Other pollutant controls",
+  "Other controls"
+)
+
+dummy <- groups |>
+  filter(subcategory %in% dummy_groups) |>
+  pull(variable)
+
+cat <- groups |>
+  filter(!variable %in% c(num, dummy)) |>
+  pull(variable)
+
+# Detect potential mismatch between Df_table2 and groups
+missing_variables <- setdiff(groups$variable, names(Df_table2))
+
+if (length(missing_variables) > 0) {
+  stop(
+    "The following variables are missing from Df_table2: ",
+    paste(missing_variables, collapse = ", ")
+  )
+}
+
+# ============================================================
+# 4. VARIABLE LABELS
+# ============================================================
+
+variable_labels <- c(
+  data_country = "Country",
+  development = "Development level",
+  urban_rural = "Localisation (urban / rural)",
+  indoor_outdoor = "Indoor or outdoor workers",
+  sector = "Sector",
+  task_type = "Task type",
+  outcome_category = "Productivity measures",
+  outcome_level = "Aggregation level",
+  exposure_measure = "Pollution method measurement",
+  data_structure = "Data structure",
+  time_frequency_observation = "Frequency",
+  age_mean = "Mean Age",
+  pct_female = "Female",
+  
+  pollutant = "Pollution measures",
+  effect_type_raw = "Estimation method",
+  id_strategy = "Identification strategy",
+  
+  time_FE = "Time FE",
+  worker_FE = "Worker FE",
+  firm_FE = "Firm FE",
+  localisation_FE = "Localisation FE",
+  no_FE = "No fixed effects",
+  
+  controls_weather = "Weather controls",
+  no_weather_controls = "No weather controls",
+  control_temp = "Temperature",
+  control_wind_speed = "Wind speed",
+  control_humidity = "Humidity",
+  weather_other = "Other",
+  
+  controls_multipollutant = "Multiple pollutants",
+  no_multiple_pollutants = "No multiple pollutants",
+  
+  controls_worker_characteristics = "Worker characteristics",
+  attendance_bias_treated = "Attendance bias",
+  controls_traffic_effect = "Traffic controls",
+  controls_demand_effect = "Demand controls",
+  controls_wage_shirking = "Wage / shirking controls"
+)
+
+# ============================================================
+# 5. STATISTICS FUNCTIONS
+# ============================================================
+
+elasticity_col <- "elasticity"
+
+if (!elasticity_col %in% names(Df_table2)) {
+  stop("The column '", elasticity_col, "' was not found in Df_table2.")
+}
+
+weighted_mean_safe <- function(x, w) {
+  valid <- is.finite(x) & is.finite(w) & w > 0
+  if (!any(valid)) return(NA_real_)
+  weighted.mean(x[valid], w[valid])
+}
+
+mean_safe <- function(v) if (length(v) > 0) mean(v) else NA_real_
+sd_safe   <- function(v) if (length(v) > 1) sd(v) else NA_real_
+min_safe  <- function(v) if (length(v) > 0) min(v) else NA_real_
+max_safe  <- function(v) if (length(v) > 0) max(v) else NA_real_
+
+calc_stats <- function(x, data, scale = 100, elasticity_stats = TRUE) {
+  x <- suppressWarnings(as.numeric(x))
+  elas <- suppressWarnings(as.numeric(data[[elasticity_col]]))
+  se <- suppressWarnings(as.numeric(data[[se_col]]))
+  
+  valid_x <- is.finite(x)
+  in_cat <- if (elasticity_stats) valid_x & x == 1 else rep(FALSE, length(x))
+  e <- elas[in_cat & is.finite(elas)]
+  s <- se[in_cat & is.finite(se)]
+  
+  tibble(
+    pct_estimates = scale * mean_safe(x[valid_x]),
+    pct_studies = scale * weighted_mean_safe(x, data$weight),
+    elas_mean = if (elasticity_stats) mean_safe(e) else NA_real_,
+    elas_sd = if (elasticity_stats) sd_safe(e) else NA_real_,
+    elas_min = if (elasticity_stats) min_safe(e) else NA_real_,
+    elas_max = if (elasticity_stats) max_safe(e) else NA_real_,
+    se_mean = if (elasticity_stats) mean_safe(s) else NA_real_,
+    se_sd = if (elasticity_stats) sd_safe(s) else NA_real_
+  )
+}
+
+# ============================================================
+# 6. STATISTICS BY VARIABLE TYPE
+# ============================================================
+
+thermal_pattern <- "thermal"
+
+# Subrows among IV estimates
+iv_rows <- function(data) {
+  d <- data |>
+    filter(id_strategy == "IV") |>
+    group_by(study_id) |>
+    mutate(weight = 1 / n()) |>
+    ungroup()
+  
+  thermal <- str_detect(
+    coalesce(as.character(d$instrument_type), ""),
+    regex(thermal_pattern, ignore_case = TRUE)
+  )
+  
+  bind_rows(
+    bind_cols(
+      tibble(
+        Variable = "id_strategy",
+        Category = "Thermal inversion",
+        Level = 1L,
+        Sub_rank = 1L
+      ),
+      calc_stats(as.numeric(thermal), d)
+    ),
+    bind_cols(
+      tibble(
+        Variable = "id_strategy",
+        Category = "Other instrument",
+        Level = 1L,
+        Sub_rank = 2L
+      ),
+      calc_stats(as.numeric(!thermal), d)
+    )
+  )
+}
+
+stats_variable <- function(v, data) {
+  if (v %in% num) {
+    return(
+      bind_cols(
+        tibble(Variable = v, Category = ""),
+        calc_stats(data[[v]], data, scale = 1, elasticity_stats = FALSE)
+      )
+    )
+  }
+  
+  if (v %in% dummy) {
+    category_label <- case_when(
+      v == "no_FE" ~ "No fixed effects",
+      v == "no_weather_controls" ~ "No weather controls",
+      v == "no_multiple_pollutants" ~ "No multiple pollutants",
+      TRUE ~ "Yes (= 1)"
+    )
+    
+    # These four weather-detail rows are indented.
+    # "No weather controls" remains unindented and appears last.
+    weather_details <- c(
+      "control_temp",
+      "control_wind_speed",
+      "control_humidity",
+      "weather_other"
+    )
+    
+    is_weather_detail <- v %in% weather_details
+    
+    return(
+      bind_cols(
+        tibble(
+          Variable = v,
+          Category = if (is_weather_detail) {
+            unname(variable_labels[v])
+          } else {
+            category_label
+          },
+          Level = if (is_weather_detail) 1L else 0L,
+          Sub_rank = case_when(
+            v == "control_temp" ~ 1L,
+            v == "control_wind_speed" ~ 2L,
+            v == "control_humidity" ~ 3L,
+            v == "weather_other" ~ 4L,
+            v == "no_weather_controls" ~ 5L,
+            TRUE ~ 0L
+          )
+        ),
+        calc_stats(data[[v]], data)
+      )
+    )
+  }
+  
+  # Categorical variable: one row per category
+  values <- as.character(data[[v]])
+  values[is.na(values) | values == ""] <- "NA"
+  
+  out <- map_dfr(unique(values), function(mod) {
+    bind_cols(
+      tibble(Variable = v, Category = mod),
+      calc_stats(as.numeric(values == mod), data)
+    )
+  })
+  
+  # Subrows under IV
+  if (v == "id_strategy") out <- bind_rows(out, iv_rows(data))
+  
+  out
+}
+
+# ============================================================
+# 7. BUILD THE RESULT ROWS
+# ============================================================
+
+groups_pos <- groups |>
+  mutate(
+    pos = row_number(),
+    block = match(subcategory, unique(subcategory))
+  ) |>
+  select(variable, subcategory, pos, block)
+
+clean_label <- function(x) {
+  x <- gsub("_", " ", x)
+  paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x)))
+}
+
+results <- map_dfr(groups$variable, stats_variable, data = Df_table2) |>
+  left_join(groups_pos, by = c("Variable" = "variable")) |>
+  mutate(
+    Level = coalesce(Level, 0L),
+    Sub_rank = coalesce(Sub_rank, 0L),
+    Variable_label = coalesce(unname(variable_labels[Variable]), Variable),
+    Row_label = if_else(
+      Category %in% c("", "Yes (= 1)"),
+      Variable_label,
+      Category
+    ),
+    Row_label = clean_label(Row_label)
+  ) |>
+  mutate(
+    iv_pct = pct_estimates[Variable == "id_strategy" & Category == "IV"][1],
+    sort_pct = if_else(Level == 1L, iv_pct, pct_estimates)
+  ) |>
+  arrange(block, pos, desc(sort_pct), Sub_rank)
+
+# ============================================================
+# 8. ADD CATEGORY HEADERS
+# ============================================================
+
+stat_cols <- c(
+  "pct_estimates", "pct_studies",
+  "elas_mean", "elas_sd", "elas_min", "elas_max",
+  "se_mean", "se_sd"
+)
+
+results <- results |>
+  group_by(block) |>
+  mutate(has_header = !(n() == 1 & Row_label == first(subcategory))) |>
+  ungroup()
+
+result_rows <- results |>
+  mutate(
+    is_header = !has_header,
+    row_order = row_number(),
+    Characteristic = case_when(
+      Level == 1L ~ paste0("   ", strrep("\u00A0", 6), Row_label),
+      has_header ~ paste0("   ", Row_label),
+      TRUE ~ Row_label
+    )
+  ) |>
+  select(block, Characteristic, is_header, row_order, all_of(stat_cols))
+
+header_rows <- results |>
+  filter(has_header) |>
+  group_by(block) |>
+  summarise(
+    Characteristic = first(subcategory),
+    .groups = "drop"
+  ) |>
+  left_join(
+    results |>
+      group_by(block) |>
+      summarise(first_result_row = min(row_number()), .groups = "drop"),
+    by = "block"
+  ) |>
+  mutate(
+    is_header = TRUE,
+    row_order = first_result_row - 0.5
+  ) |>
+  select(block, Characteristic, is_header, row_order)
+
+first_row <- result_rows |>
+  group_by(block) |>
+  summarise(first_order = min(row_order), .groups = "drop")
+
+header_rows <- header_rows |>
+  select(-row_order) |>
+  left_join(first_row, by = "block") |>
+  mutate(row_order = first_order - 0.5) |>
+  select(-first_order)
+
+Table2_display <- bind_rows(header_rows, result_rows) |>
+  arrange(row_order) |>
+  select(Characteristic, is_header, all_of(stat_cols))
+
+# ============================================================
+# 9. FORMAT THE TABLE WITH GT
+# ============================================================
+
+Table2_gt <- Table2_display |>
+  gt(rowname_col = "Characteristic") |>
+  cols_hide(columns = is_header) |>
+  cols_label(
+    pct_estimates = "% of estimates",
+    pct_studies = "% of studies",
+    elas_mean = "Mean elasticity",
+    elas_sd = "SD elasticity",
+    elas_min = "Min",
+    elas_max = "Max",
+    se_mean = "Mean (SE)",
+    se_sd = "SD (SE)"
+  ) |>
+  fmt_number(columns = c(pct_estimates, pct_studies), decimals = 1) |>
+  fmt_number(
+    columns = c(
+      elas_mean, elas_sd, elas_min, elas_max,
+      se_mean, se_sd
+    ),
+    decimals = 3
+  ) |>
+  sub_missing(columns = everything(), missing_text = "") |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_stub(rows = is_header)
+  ) |>
+  tab_style(
+    style = cell_borders(
+      sides = "left",
+      color = "#D3D3D3",
+      weight = px(2)
+    ),
+    locations = cells_body(columns = elas_mean)
+  ) |>
+  tab_options(
+    table.font.size = 11,
+    data_row.padding = px(3),
+    stub.border.style = "solid",
+    stub.border.width = px(2),
+    stub.border.color = "#D3D3D3"
+  ) |>
+  tab_source_note(
+    "Note: under IV, the shares are computed among IV estimates only."
+  )
+
+# ============================================================
+# 10. EXPORT AND DISPLAY
+# ============================================================
+
+Table2_gt
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+
+# ============================================================
+# B. DENSITY OF ELASTICITIES
+# ============================================================
+
+# Reuse the database already trimmed at the 5th and 95th percentiles
+Df_plot <- Df_table2 |>
+  filter(is.finite(elasticity))
+
+# ============================================================
+# Plot 1: Unweighted histogram + density curve
+# ============================================================
+
+p_density <- ggplot(Df_plot, aes(x = elasticity)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 50,
+    fill = "grey75",
+    color = "white",
+    alpha = 0.8
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed",
+    color = "grey40",
+    linewidth = 0.6
+  ) +
+  labs(
+    title = "Distribution of estimated elasticities",
+    subtitle = paste("N =", nrow(Df_plot), "estimates"),
+    x = "Elasticity",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+print(p_density)
+
+# ============================================================
+# Plot 2: Elasticity density weighted by 1/n_j
+# ============================================================
+
+Df_weighted <- Df_plot |>
+  group_by(study_id) |>
+  mutate(
+    weight = 1 / n()
+  ) |>
+  ungroup()
+
+p_density_weighted <- ggplot(
+  Df_weighted,
+  aes(x = elasticity, weight = weight)
+) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 50,
+    fill = "grey75",
+    color = "white",
+    alpha = 0.8
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed",
+    color = "grey40",
+    linewidth = 0.6
+  ) +
+  labs(
+    title = "Distribution of estimated elasticities",
+    subtitle = "Weighted by the inverse number of estimates per study",
+    x = "Elasticity",
+    y = "Density",
+    caption = "Each study receives a total weight of 1."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+print(p_density_weighted)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+
+# ============================================================
+# C. DENSITY OF ABSOLUTE T-STATISTICS
+# ============================================================
+
+# 1. Calculate absolute t-statistics
+Df_tstat <- Df_table2 |>
+  filter(
+    is.finite(elasticity),
+    is.finite(se_elasticity),
+    se_elasticity > 0
+  ) |>
+  mutate(t_stat = abs(elasticity / se_elasticity)) |>
+  filter(t_stat <= 25)
+
+# ============================================================
+# Plot 1: Unweighted histogram + density curve
+# ============================================================
+
+p_tstat <- ggplot(Df_tstat, aes(x = t_stat)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 50,
+    fill = "grey80",
+    color = "grey60",
+    linewidth = 0.3
+  ) +
+  geom_density(
+    color = "black",
+    linewidth = 1.1,
+    adjust = 1
+  ) +
+  geom_vline(
+    xintercept = 1.96,
+    color = "#8B1A1A",
+    linewidth = 1
+  ) +
+  annotate(
+    "text",
+    x = 1.96,
+    y = Inf,
+    label = "1.96",
+    color = "#8B1A1A",
+    vjust = 1.5,
+    hjust = -0.15,
+    size = 4
+  ) +
+  scale_x_continuous(
+    limits = c(0, 25),
+    breaks = seq(0, 25, by = 5)
+  ) +
+  labs(
+    title = "Distribution of absolute t-statistics",
+    subtitle = paste("N =", nrow(Df_tstat), "estimates"),
+    x = "Unweighted |t|-statistics",
+    y = "Density",
+    caption = "Estimates with |t| > 25 are excluded."
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold")
+  )
+
+print(p_tstat)
+
+# ============================================================
+# Plot 2: Density weighted by 1/n_j
+# ============================================================
+
+Df_tstat_weighted <- Df_tstat |>
+  group_by(study_id) |>
+  mutate(weight = 1 / n()) |>
+  ungroup()
+
+p_tstat_weighted <- ggplot(
+  Df_tstat_weighted,
+  aes(x = t_stat, weight = weight)
+) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 50,
+    fill = "grey80",
+    color = "grey60",
+    linewidth = 0.3
+  ) +
+  geom_density(
+    color = "black",
+    linewidth = 1.1,
+    adjust = 1
+  ) +
+  geom_vline(
+    xintercept = 1.96,
+    color = "#8B1A1A",
+    linewidth = 1
+  ) +
+  annotate(
+    "text",
+    x = 1.96,
+    y = Inf,
+    label = "1.96",
+    color = "#8B1A1A",
+    vjust = 1.5,
+    hjust = -0.15,
+    size = 4
+  ) +
+  scale_x_continuous(
+    limits = c(0, 25),
+    breaks = seq(0, 25, by = 5)
+  ) +
+  labs(
+    title = "Distribution of absolute t-statistics",
+    subtitle = "Weighted by the inverse number of estimates per study",
+    x = "Weighted |t|-statistics",
+    y = "Density",
+    caption = "Each study receives a total weight of 1; estimates with |t| > 25 are excluded."
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold")
+  )
+
+print(p_tstat_weighted)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+
+# ============================================================
+# D. ELASTICITIES BY STUDY — UNWEIGHTED
+#   1. Boxplot
+#   2. Mean elasticity + 95% CI
+# ============================================================
+
+# ============================================================
+# Graph theme
+# ============================================================
+
+theme_graph <- function() {
+  theme_minimal(base_family = "Times New Roman") +
+    theme(
+      # Titles
+      plot.title = element_text(
+        size = 14,
+        face = "bold",
+        colour = "#1F1F1F",
+        hjust = 0
+      ),
+      plot.subtitle = element_text(
+        size = 11,
+        colour = "grey35",
+        hjust = 0
+      ),
+
+      # Axes
+      axis.title = element_text(
+        size = 11,
+        colour = "#1F1F1F"
+      ),
+      axis.text = element_text(
+        size = 9,
+        colour = "#333333"
+      ),
+
+      # Grid
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_blank(),
+
+      # Legend
+      legend.position = "bottom",
+      legend.title = element_text(size = 10),
+      legend.text = element_text(size = 9),
+
+      # Caption
+      plot.caption = element_text(
+        size = 8,
+        colour = "grey40",
+        hjust = 0
+      ),
+
+      # Margins
+      plot.margin = margin(10, 15, 10, 10)
+    )
+}
+
+# ============================================================
+# Function: format study references
+# ============================================================
+
+make_label <- function(id) {
+  year <- stringr::str_extract(id, "[0-9]{4}[a-z]?$")
+  name <- stringr::str_remove(id, "[0-9]{4}[a-z]?$")
+  name <- stringr::str_replace(name, "EtAl$", " et al.")
+  paste0(name, " (", year, ")")
+}
+
+# 1. Prepare data
+Df_study <- Df_table2 |>
+  filter(
+    !is.na(study_id),
+    is.finite(elasticity)
+  ) |>
+  mutate(
+    el = as.numeric(elasticity),
+    se = suppressWarnings(as.numeric(se_elasticity)),
+    se = if_else(is.finite(se) & se > 0, se, NA_real_),
+    dof_ = suppressWarnings(as.numeric(dof)),
+    crit = if_else(
+      is.finite(dof_) & dof_ > 0,
+      qt(0.975, dof_),
+      qnorm(0.975)
+    ),
+    label = make_label(study_id)
+  )
+
+# Order studies by label
+study_levels <- Df_study |>
+  distinct(label) |>
+  arrange(label) |>
+  pull(label)
+
+Df_study <- Df_study |>
+  mutate(label = factor(label, levels = rev(study_levels)))
+
+# ============================================================
+# Plot 1: Boxplot of individual elasticities by study
+# ============================================================
+
+p_box_unweighted <- ggplot(
+  Df_study,
+  aes(x = el, y = label)
+) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dotted",
+    colour = "grey40"
+  ) +
+  geom_boxplot(
+    fill = "white",
+    colour = "#1F4E79",
+    linewidth = 0.4,
+    outlier.size = 1.2,
+    width = 0.6
+  ) +
+  scale_x_continuous(
+    breaks = scales::pretty_breaks(8)
+  ) +
+  labs(
+    title = "Distribution of elasticities by study",
+    subtitle = "Unweighted estimates",
+    x = "Elasticity",
+    y = "Reference",
+    caption = paste(
+      "Boxes: first and third quartiles; central line: median;",
+      "whiskers: up to 1.5 x IQR; dots: outliers."
+    )
+  ) +
+  theme_graph()
+
+print(p_box_unweighted)
+
+# ============================================================
+# Plot 2: Mean elasticity by study + 95% CI
+# ============================================================
+
+study_means_unweighted <- Df_study |>
+  group_by(study_id, label) |>
+  summarise(
+    n_estimates = sum(is.finite(el)),
+    mean = mean(el, na.rm = TRUE),
+    sd_el = if (sum(is.finite(el)) > 1) {
+      sd(el, na.rm = TRUE)
+    } else {
+      NA_real_
+    },
+    se_mean = sd_el / sqrt(n_estimates),
+    crit_mean = if (n_estimates > 1) {
+      qt(0.975, n_estimates - 1)
+    } else {
+      NA_real_
+    },
+    mean_low = mean - crit_mean * se_mean,
+    mean_high = mean + crit_mean * se_mean,
+    .groups = "drop"
+  )
+
+p_mean_ci_unweighted <- ggplot(
+  study_means_unweighted,
+  aes(y = label)
+) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dotted",
+    colour = "grey40"
+  ) +
+  geom_linerange(
+    aes(xmin = mean_low, xmax = mean_high),
+    orientation = "y",
+    colour = "#1F4E79",
+    linewidth = 0.5,
+    na.rm = TRUE
+  ) +
+  geom_point(
+    aes(x = mean),
+    shape = 18,
+    size = 2.6,
+    colour = "#1F4E79"
+  ) +
+  scale_x_continuous(
+    breaks = scales::pretty_breaks(8)
+  ) +
+  labs(
+    title = "Mean elasticity by study",
+    subtitle = "Unweighted mean with 95% confidence interval",
+    x = "Mean elasticity",
+    y = "Reference",
+    caption = paste(
+      "Diamonds: arithmetic mean of elasticities within each study.",
+      "Bars: 95% confidence intervals based on the within-study SD."
+    )
+  ) +
+  theme_graph()
+
+print(p_mean_ci_unweighted)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+
+# ============================================================
+# Plot 3: Funnel plot
+# ============================================================
+
+Df_funnel <- Df_study |>
+  filter(
+    is.finite(el),
+    is.finite(se),
+    se > 0
+  )
+
+# Overall mean elasticity
+mean_elasticity <- mean(Df_funnel$el, na.rm = TRUE)
+
+p_funnel <- ggplot(
+  Df_funnel,
+  aes(x = el, y = se)
+) +
+  # Vertical line: overall mean elasticity
+  geom_vline(
+    xintercept = mean_elasticity,
+    linetype = "solid",
+    colour = "#C0504D",
+    linewidth = 0.6
+  ) +
+  # Funnel limits: approximate 95% reference boundaries
+  geom_line(
+    data = tibble(
+      se = seq(0, max(Df_funnel$se, na.rm = TRUE), length.out = 200)
+    ) |>
+      mutate(
+        left = mean_elasticity - 1.96 * se,
+        right = mean_elasticity + 1.96 * se
+      ) |>
+      pivot_longer(
+        cols = c(left, right),
+        names_to = "boundary",
+        values_to = "el"
+      ),
+    aes(x = el, y = se, group = boundary),
+    inherit.aes = FALSE,
+    colour = "#1F4E79",
+    linetype = "dashed",
+    linewidth = 0.5
+  ) +
+  geom_point(
+    colour = "#1F4E79",
+    alpha = 0.65,
+    size = 2
+  ) +
+  scale_y_reverse(
+    breaks = scales::pretty_breaks(6)
+  ) +
+  scale_x_continuous(
+    breaks = scales::pretty_breaks(8)
+  ) +
+  labs(
+    title = "Funnel plot of elasticity estimates",
+    subtitle = "Unweighted estimates",
+    x = "Elasticity",
+    y = "Standard error",
+    caption = paste(
+      "Vertical line: mean elasticity.",
+      "Dashed lines: approximate 95% reference boundaries."
+    )
+  ) +
+  theme_graph()
+
+print(p_funnel)
+```
+
+
+
